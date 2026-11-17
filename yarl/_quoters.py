@@ -17,6 +17,11 @@ FRAGMENT_REQUOTER = _Quoter(safe="?/:@")
 WHATWG_PATH_REQUOTER = _Quoter(
     safe="@:", protected=":/@!$&'()*+,;=", keep_invalid_pct=True
 )
+# Opaque paths keep literal spaces in WHATWG mode, but a written %20
+# must stay percent-encoded, even when spaces are otherwise allowed.
+WHATWG_OPAQUE_PATH_REQUOTER = _Quoter(
+    safe="@: ", protected=":/@!$&'()*+,;= ", keep_invalid_pct=True
+)
 WHATWG_QUERY_REQUOTER = _Quoter(
     safe="?/:@", protected="=+&;", qs=True, keep_invalid_pct=True
 )

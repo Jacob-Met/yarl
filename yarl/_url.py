@@ -80,6 +80,7 @@ from ._quoters import (
     REQUOTER,
     UNQUOTER,
     WHATWG_FRAGMENT_REQUOTER,
+    WHATWG_OPAQUE_PATH_REQUOTER,
     WHATWG_PATH_REQUOTER,
     WHATWG_QUERY_REQUOTER,
     ZONE_ID_UNQUOTER,
@@ -767,9 +768,26 @@ def _encode_url(url_str: str, mode: Mode, backslashes: bool = True) -> "URL":
             cache["raw_password"] = raw_password
 
     if path:
-        # WHATWG mode keeps a "%" that does not start a "%XX" escape, RFC
-        # mode encodes it as "%25"
-        path = (WHATWG_PATH_REQUOTER if mode is _WHATWG else PATH_REQUOTER)(path)
+        # The WHATWG opaque path state keeps literal interior spaces. Only
+        # the space immediately before a query or fragment delimiter becomes
+        # %20. Percent-encoded spaces in the original input stay encoded.
+        if (
+            not netloc
+            and " " in path
+            and mode is _WHATWG
+            and scheme
+            and scheme not in SPECIAL_SCHEMES
+            and path[0] != "/"
+        ):
+            if path[-1] == " " and (
+                query or fragment or empty & (EMPTY_QUERY | EMPTY_FRAGMENT)
+            ):
+                path = f"{path[:-1]}%20"
+            path = WHATWG_OPAQUE_PATH_REQUOTER(path)
+        else:
+            # WHATWG keeps a "%" that does not start a "%XX" escape; RFC
+            # mode encodes it as "%25".
+            path = (WHATWG_PATH_REQUOTER if mode is _WHATWG else PATH_REQUOTER)(path)
         if "." in path and (netloc or (mode is _WHATWG and scheme == "file")):
             # A file URL always has an authority in WHATWG mode, also an
             # empty one, and its path is absolute: "file:///a/../b" and

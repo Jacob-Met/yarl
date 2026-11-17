@@ -121,6 +121,25 @@ mode keeps the path of such a URL with a non-special scheme as is.
 
    RFC 3986 mode removes dot segments from a path without an authority.
 
+For a non-special scheme without an authority, WHATWG mode also keeps
+literal spaces inside an *opaque path* instead of encoding them. If a space
+immediately precedes a query or fragment delimiter, that last space is
+encoded as ``%20``; an explicitly encoded ``%20`` stays encoded. This
+applies when parsing a string. Builder methods still encode spaces in
+their input paths.
+
+.. doctest::
+
+   >>> str(URL('sc:opaque  x?hi'))
+   'sc:opaque  x?hi'
+   >>> str(URL('sc:opaque  ?hi'))
+   'sc:opaque %20?hi'
+   >>> str(URL('sc:opaque%20x'))
+   'sc:opaque%20x'
+   >>> str(URL.build(scheme='sc', path='opaque x'))
+   'sc:opaque%20x'
+
+
 For the special schemes other than ``file``, the default WHATWG mode reads
 the text after the scheme as the authority even without ``//``, skipping any
 number of leading slashes, as the WHATWG URL Standard does:

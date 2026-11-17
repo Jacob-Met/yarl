@@ -1,0 +1,4 @@
+Kept literal interior spaces in opaque paths of non-special WHATWG URLs
+while preserving encoded spaces and encoding the last space before a
+query or fragment delimiter.
+-- by :user:`Jacob-Met`.
