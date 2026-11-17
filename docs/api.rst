@@ -117,6 +117,17 @@ mode keeps the path of such a URL with a non-special scheme as is.
    >>> URL('urn:a/./b', mode='rfc'), URL('urn:a/./b')
    (URL('urn:a/b', mode='rfc'), URL('urn:a/./b'))
 
+A non-special URL whose path starts with ``/`` instead has a hierarchical
+path in WHATWG mode. Its dot segments are removed even without an authority.
+When this exposes a path starting with ``//``, the serialized URL inserts
+``/.`` to distinguish the path from an authority. Rootless paths such as
+``urn:a/../b`` remain opaque in WHATWG mode.
+
+.. doctest::
+
+   >>> URL('urn:/a/../b'), URL('urn:/a/..//b')
+   (URL('urn:/b'), URL('urn:/.//b'))
+
 .. versionchanged:: 1.26
 
    RFC 3986 mode removes dot segments from a path without an authority.

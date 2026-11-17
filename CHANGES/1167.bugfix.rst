@@ -1,0 +1,3 @@
+Fixed dot segment removal from hierarchical non-special URL paths without
+an authority in WHATWG mode while preserving opaque rootless paths.
+-- by :user:`Jacob-Met`.

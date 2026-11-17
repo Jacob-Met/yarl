@@ -332,25 +332,27 @@ def test_equality_follows_str(first: URL, second: URL, equal: bool) -> None:
 
 
 @pytest.mark.parametrize(
-    ("path", "written"),
+    ("path", "written", "canonical"),
     [
-        ("//a", "sc:/.//a"),
-        ("//a/b", "sc:/.//a/b"),
-        ("/.//a", "sc:/././/a"),
-        ("/././/a", "sc:/./././/a"),
-        ("/./a", "sc:/./a"),
-        ("/..//a", "sc:/..//a"),
+        ("//a", "sc:/.//a", "sc:/.//a"),
+        ("//a/b", "sc:/.//a/b", "sc:/.//a/b"),
+        ("/.//a", "sc:/././/a", "sc:/.//a"),
+        ("/././/a", "sc:/./././/a", "sc:/.//a"),
+        ("/./a", "sc:/./a", "sc:/a"),
+        ("/..//a", "sc:/..//a", "sc:/.//a"),
     ],
 )
-def test_path_starting_with_double_slash_round_trips(path: str, written: str) -> None:
-    # str() adds "/." in front of a path that would read as an authority,
-    # including a literal "/." before "//", and parsing drops exactly one.
+def test_path_starting_with_double_slash_round_trips(
+    path: str, written: str, canonical: str
+) -> None:
+    # str() adds "/." in front of a path that would read as an authority.
+    # encoded=True preserves the segments; normal parsing removes dots.
     url = URL.build(scheme="sc", path=path, encoded=True)
     assert str(url) == written
-    for encoded in (True, False):
-        again = URL(written, encoded=encoded)
-        assert again.raw_path == path
-        assert again.raw_parts == url.raw_parts
+    assert URL(written, encoded=True).raw_parts == url.raw_parts
+    normalized = URL(written)
+    assert str(normalized) == canonical
+    assert normalized.raw_parts == URL(canonical, encoded=True).raw_parts
 
 
 def test_long_dot_segment_run_round_trips() -> None:
@@ -359,4 +361,5 @@ def test_long_dot_segment_run_round_trips() -> None:
     url = URL.build(scheme="sc", path=path, encoded=True)
     assert str(url) == f"sc:/.{path}"
     assert URL(str(url), encoded=True).raw_path == path
-    assert URL(str(url)).raw_path == path
+    assert URL(str(url)).raw_path == "//a"
+    assert str(URL(str(url))) == "sc:/.//a"

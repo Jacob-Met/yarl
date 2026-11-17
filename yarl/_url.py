@@ -770,10 +770,18 @@ def _encode_url(url_str: str, mode: Mode, backslashes: bool = True) -> "URL":
         # WHATWG mode keeps a "%" that does not start a "%XX" escape, RFC
         # mode encodes it as "%25"
         path = (WHATWG_PATH_REQUOTER if mode is _WHATWG else PATH_REQUOTER)(path)
-        if "." in path and (netloc or (mode is _WHATWG and scheme == "file")):
+        if "." in path and (
+            netloc
+            or (
+                mode is _WHATWG
+                and scheme
+                and (scheme == "file" or (path[0] == "/" and "/." in path))
+            )
+        ):
             # A file URL always has an authority in WHATWG mode, also an
             # empty one, and its path is absolute: "file:///a/../b" and
-            # "file:a/../b" are "file:///b".
+            # "file:a/../b" are "file:///b". Hierarchical paths with
+            # non-special schemes also remove dot segments.
             if not netloc and path[0] != "/":
                 # As a reference the path is relative to the path of a file
                 # base, so join() takes the path as it is written.
@@ -1255,6 +1263,10 @@ class URL:
                     "start with a slash ('/') if set"
                 )
                 raise ValueError(msg)
+        elif path and scheme and mode is _WHATWG and path[0] == "/" and "/." in path:
+            # A non-special hierarchical URL has an absolute path even
+            # without an authority, unlike an opaque rootless URL.
+            path = _normalize_path(path, scheme, mode)
         elif path and scheme and mode is not _WHATWG and "." in path:
             # Without an authority, as the parser does in RFC 3986 mode.
             path = remove_dot_segments(path)
@@ -2316,9 +2328,19 @@ class URL:
                 # A file URL has an authority in WHATWG mode, also an empty one.
                 if "." in path:
                     path = _normalize_path(path, self._scheme, self._mode)
-            elif self._scheme and self._mode is not _WHATWG and "." in path:
-                # Without an authority, as the parser does in RFC 3986 mode.
-                path = remove_dot_segments(path)
+            elif self._scheme and "." in path:
+                if self._mode is _WHATWG:
+                    # with_path() always writes an absolute path, even when
+                    # the input is rootless. Only dot segments need work.
+                    if path[0] == "." or "/." in path:
+                        path = _normalize_path(
+                            path if path[0] == "/" else f"/{path}",
+                            self._scheme,
+                            self._mode,
+                        )
+                else:
+                    # Without an authority, as in RFC 3986 parsing.
+                    path = remove_dot_segments(path)
         if not path:
             path = _empty_path(self._scheme, self._mode)
         elif path[0] != "/":
